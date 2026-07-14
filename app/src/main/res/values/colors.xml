@@ -1,0 +1,28 @@
+<resources>
+    <!-- Brand palette (light). Night overrides live in values-night/colors.xml. -->
+    <color name="brand_primary">#5B4CE0</color>
+    <color name="brand_on_primary">#FFFFFF</color>
+    <color name="brand_primary_container">#E5DEFF</color>
+    <color name="brand_on_primary_container">#180066</color>
+
+    <color name="brand_secondary">#00807B</color>
+    <color name="brand_on_secondary">#FFFFFF</color>
+    <color name="brand_secondary_container">#B8F5EF</color>
+    <color name="brand_on_secondary_container">#002220</color>
+
+    <color name="brand_tertiary">#8B5000</color>
+    <color name="brand_tertiary_container">#FFDCBE</color>
+    <color name="brand_on_tertiary_container">#2C1600</color>
+
+    <color name="app_background">#FBF8FF</color>
+    <color name="app_surface">#FFFFFF</color>
+    <color name="app_surface_variant">#E6E0EC</color>
+    <color name="app_on_surface">#1B1B21</color>
+    <color name="app_on_surface_variant">#48454E</color>
+    <color name="app_outline">#79767F</color>
+
+    <color name="success">#1E8E3E</color>
+
+    <!-- Launcher icon background -->
+    <color name="ic_launcher_background">#4F46E5</color>
+</resources>

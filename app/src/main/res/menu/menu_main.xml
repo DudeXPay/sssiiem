@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_scope"
+        android:icon="@drawable/ic_apps"
+        android:title="@string/scope"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_random"
+        android:icon="@drawable/ic_shuffle"
+        android:title="@string/random_profile"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_import"
+        android:icon="@drawable/ic_download"
+        android:title="@string/import_profiles"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_export"
+        android:icon="@drawable/ic_upload"
+        android:title="@string/export_profiles"
+        app:showAsAction="never" />
+</menu>

@@ -1,0 +1,6 @@
+<resources>
+    <plurals name="profile_count">
+        <item quantity="one">%d profile</item>
+        <item quantity="other">%d profiles</item>
+    </plurals>
+</resources>

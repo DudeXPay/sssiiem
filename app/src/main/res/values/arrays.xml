@@ -1,0 +1,19 @@
+<resources>
+    <!--
+      Default LSPosed scope. "android" is the system_server package: some SIM
+      state ultimately resolves through it, and including it lets the optional
+      binder-level hooks reach that path. Users refine this list per-app in the
+      settings UI, which writes the authoritative allow-list to shared prefs.
+    -->
+    <string-array name="xposed_scope">
+        <item>android</item>
+        <item>com.android.phone</item>
+    </string-array>
+
+    <!-- Phone type dropdown. Index maps to value in code: 0→GSM(1), 1→CDMA(2), 2→None(0). -->
+    <string-array name="phone_types">
+        <item>GSM</item>
+        <item>CDMA</item>
+        <item>None</item>
+    </string-array>
+</resources>

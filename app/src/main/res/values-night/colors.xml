@@ -1,0 +1,25 @@
+<resources>
+    <!-- Brand palette (dark). Lighter, less-saturated tints read better on dark. -->
+    <color name="brand_primary">#C8BFFF</color>
+    <color name="brand_on_primary">#2C0E86</color>
+    <color name="brand_primary_container">#4536C7</color>
+    <color name="brand_on_primary_container">#E5DEFF</color>
+
+    <color name="brand_secondary">#9CD9D3</color>
+    <color name="brand_on_secondary">#003734</color>
+    <color name="brand_secondary_container">#00615C</color>
+    <color name="brand_on_secondary_container">#B8F5EF</color>
+
+    <color name="brand_tertiary">#FFB870</color>
+    <color name="brand_tertiary_container">#6A3C00</color>
+    <color name="brand_on_tertiary_container">#FFDCBE</color>
+
+    <color name="app_background">#131318</color>
+    <color name="app_surface">#1B1B21</color>
+    <color name="app_surface_variant">#48454E</color>
+    <color name="app_on_surface">#E5E1E9</color>
+    <color name="app_on_surface_variant">#CAC4D0</color>
+    <color name="app_outline">#948F99</color>
+
+    <color name="success">#6DD58C</color>
+</resources>

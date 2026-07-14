@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">SIM Emulator</string>
+    <string name="xposed_description">Emulates a physical SIM for app testing on rooted devices. Spoofs TelephonyManager / SubscriptionManager per-app.</string>
+
+    <!-- Main -->
+    <string name="master_title">SIM emulation</string>
+    <string name="master_on_sub">Active · spoofing scoped apps</string>
+    <string name="master_off_sub">Disabled · no apps affected</string>
+    <string name="profiles_header">Profiles</string>
+    <string name="add_profile">Add profile</string>
+    <string name="random_profile">Random profile</string>
+    <string name="scope">Per-app scope</string>
+    <string name="import_profiles">Import profiles</string>
+    <string name="export_profiles">Export profiles</string>
+    <string name="empty_title">No SIM profiles yet</string>
+    <string name="empty_sub">Tap “Add profile” or generate a random one to get started.</string>
+    <string name="esim_badge">eSIM</string>
+
+    <!-- Editor -->
+    <string name="new_profile">New profile</string>
+    <string name="edit_profile">Edit profile</string>
+    <string name="sec_carrier">Carrier</string>
+    <string name="sec_subscriber">Subscriber identity</string>
+    <string name="sec_slot">Subscription &amp; slot</string>
+    <string name="save">Save profile</string>
+    <string name="delete">Delete</string>
+    <string name="operator_numeric_fmt">Operator numeric (MCC+MNC): %s</string>
+
+    <!-- Scope -->
+    <string name="scope_hint">Only apps switched on here are spoofed. They must also be in this module’s LSPosed scope.</string>
+    <string name="scope_search">Search apps</string>
+</resources>

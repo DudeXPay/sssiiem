@@ -15,6 +15,11 @@ data class SimProfile(
     var id: String = java.util.UUID.randomUUID().toString(),
     var label: String = "Profile",
 
+    // Whether this SIM is inserted/active. At most ProfileConfig.MAX_ACTIVE (2) may
+    // be active at once, mirroring real dual-SIM hardware. Inactive profiles are
+    // kept for editing but not presented to apps.
+    var active: Boolean = true,
+
     // ---- Identity / carrier ----
     var carrierName: String = "Test Mobile",       // getSimOperatorName / getNetworkOperatorName
     var carrierId: Int = 1435,                      // getCarrierId

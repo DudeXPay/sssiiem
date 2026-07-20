@@ -13,6 +13,7 @@ import com.simemu.spoof.R
 import com.simemu.spoof.core.ConfigStore
 import com.simemu.spoof.core.ProfileConfig
 import com.simemu.spoof.core.ProfileGenerator
+import com.simemu.spoof.core.SimProfile
 import com.simemu.spoof.databinding.ActivityMainBinding
 
 /**
@@ -44,7 +45,7 @@ class MainActivity : AppCompatActivity() {
             updateMasterStatus(checked)
         }
 
-        adapter = ProfileAdapter(config.profiles) { openEditor(it.id) }
+        adapter = ProfileAdapter(config.profiles, { openEditor(it.id) }, ::onToggleActive)
         b.listProfiles.layoutManager = LinearLayoutManager(this)
         b.listProfiles.adapter = adapter
 
@@ -84,6 +85,26 @@ class MainActivity : AppCompatActivity() {
         b.txtMasterStatus.setText(if (on) R.string.master_on_sub else R.string.master_off_sub)
     }
 
+    /** Turn a SIM on/off, enforcing the MAX_ACTIVE (2) limit. Returns false if rejected. */
+    private fun onToggleActive(profile: SimProfile, checked: Boolean): Boolean {
+        val cfg = store.load()
+        val target = cfg.profiles.firstOrNull { it.id == profile.id } ?: return false
+        if (checked && cfg.activeCount() >= ProfileConfig.MAX_ACTIVE) {
+            Snackbar.make(
+                b.root,
+                "Only ${ProfileConfig.MAX_ACTIVE} SIMs can be active at once — turn one off first",
+                Snackbar.LENGTH_SHORT
+            ).show()
+            return false
+        }
+        target.active = checked
+        store.save(cfg)
+        config = cfg
+        adapter.update(config.profiles)
+        refreshList()
+        return true
+    }
+
     private fun openEditor(profileId: String?) {
         startActivity(Intent(this, ProfileEditActivity::class.java)
             .putExtra(ProfileEditActivity.EXTRA_ID, profileId))
@@ -99,8 +120,9 @@ class MainActivity : AppCompatActivity() {
         val empty = config.profiles.isEmpty()
         b.emptyState.visibility = if (empty) android.view.View.VISIBLE else android.view.View.GONE
         b.listProfiles.visibility = if (empty) android.view.View.GONE else android.view.View.VISIBLE
-        b.txtProfileCount.text = resources.getQuantityString(
+        val total = resources.getQuantityString(
             R.plurals.profile_count, config.profiles.size, config.profiles.size)
+        b.txtProfileCount.text = "$total · ${config.activeCount()}/${ProfileConfig.MAX_ACTIVE} active"
     }
 
     // ---- Import / Export via Storage Access Framework ----

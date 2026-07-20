@@ -30,15 +30,29 @@ data class ProfileConfig(
 ) {
     fun isAppEnabled(pkg: String): Boolean = scope[pkg] == true
 
-    /** The profile that owns a given subscription id, if any. */
-    fun profileForSub(subId: Int): SimProfile? = profiles.firstOrNull { it.subscriptionId == subId }
+    /**
+     * The SIMs actually presented to apps: only active profiles, capped at
+     * MAX_ACTIVE (2) as a hardware-realistic safety net. Everything downstream
+     * (TelephonyManager / SubscriptionManager hooks) reads from here.
+     */
+    fun activeProfiles(): List<SimProfile> = profiles.filter { it.active }.take(MAX_ACTIVE)
+
+    /** How many profiles are currently switched on. */
+    fun activeCount(): Int = profiles.count { it.active }
+
+    /** The profile that owns a given subscription id, among active ones. */
+    fun profileForSub(subId: Int): SimProfile? =
+        activeProfiles().firstOrNull { it.subscriptionId == subId }
 
     /** Profile shown for single-SIM getters (first active profile). */
-    fun primary(): SimProfile? = profiles.firstOrNull()
+    fun primary(): SimProfile? = activeProfiles().firstOrNull()
 
     fun toJson(): String = JSON.encodeToString(this)
 
     companion object {
+        /** Max SIMs active at once (dual-SIM). */
+        const val MAX_ACTIVE = 2
+
         val JSON = Json {
             prettyPrint = true
             ignoreUnknownKeys = true   // forward-compatible with older exports

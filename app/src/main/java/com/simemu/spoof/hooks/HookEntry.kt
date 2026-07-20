@@ -52,9 +52,9 @@ class HookEntry : IXposedHookLoadPackage {
         val (master, config) = loadConfig(ctx) ?: return
         if (!master) return
         if (!config.isAppEnabled(pkg)) return
-        if (config.profiles.isEmpty()) return
+        if (config.activeProfiles().isEmpty()) return
 
-        XLog.d("Activating SIM emulation for $pkg (${config.profiles.size} profile(s))")
+        XLog.d("Activating SIM emulation for $pkg (${config.activeProfiles().size} active SIM(s))")
         try {
             TelephonyManagerHook.install(TelephonyManager::class.java, config)
             SubscriptionManagerHook.install(SubscriptionManager::class.java, config)

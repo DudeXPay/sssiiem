@@ -16,13 +16,14 @@ import de.robv.android.xposed.XC_MethodHook
 object SubscriptionManagerHook {
 
     fun install(cls: Class<*>, config: ProfileConfig) {
+        val active = config.activeProfiles()
         val infos: List<SubscriptionInfo> =
-            config.profiles.mapNotNull { SubscriptionInfoFactory.build(it) }
+            active.mapNotNull { SubscriptionInfoFactory.build(it) }
         if (infos.isEmpty()) {
             XLog.e("SubscriptionManager: could not fabricate any SubscriptionInfo")
             return
         }
-        val subIds: IntArray = config.profiles.map { it.subscriptionId }.toIntArray()
+        val subIds: IntArray = active.map { it.subscriptionId }.toIntArray()
 
         // getActiveSubscriptionInfoList(): the full list of active subs.
         replace(cls, "getActiveSubscriptionInfoList") { infos }

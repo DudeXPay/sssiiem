@@ -78,7 +78,7 @@ object TelephonyManagerHook {
 
         // ---- Modem / slot counts ----
         // Some apps decide "is there a SIM / how many" from these, not getSimState.
-        val simCount = config.profiles.size.coerceAtLeast(1)
+        val simCount = config.activeProfiles().size.coerceAtLeast(1)
         // getPhoneCount()/getActiveModemCount()/getSupportedModemCount(): slot counts.
         replace(cls, "getPhoneCount") { simCount }
         replace(cls, "getActiveModemCount") { simCount }

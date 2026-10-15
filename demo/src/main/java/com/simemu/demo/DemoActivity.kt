@@ -59,13 +59,32 @@ class DemoActivity : AppCompatActivity() {
             list?.forEachIndexed { i, info ->
                 line("  sub[$i]", "id=${info.subscriptionId} slot=${info.simSlotIndex} " +
                         "carrier=${info.carrierName} mcc=${info.mccString} mnc=${info.mncString} " +
-                        "iccid=${info.iccId} embedded=${info.isEmbedded}")
+                        "number=${info.number} iccid=${info.iccId} embedded=${info.isEmbedded}")
             }
         }
         safe { line("defaultSubscriptionId", SubscriptionManager.getDefaultSubscriptionId()) }
         safe { line("defaultDataSubscriptionId", SubscriptionManager.getDefaultDataSubscriptionId()) }
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            safe { line("activeDataSubscriptionId", SubscriptionManager.getActiveDataSubscriptionId()) }
+        }
         safe { line("defaultVoiceSubscriptionId", SubscriptionManager.getDefaultVoiceSubscriptionId()) }
         safe { line("defaultSmsSubscriptionId", SubscriptionManager.getDefaultSmsSubscriptionId()) }
+
+        line("", "")
+        line("--- telephony/siminfo (must be added SIM only) ---", "")
+        safe {
+            val uri = android.net.Uri.parse("content://telephony/siminfo")
+            contentResolver.query(uri, null, null, null, null)?.use { c ->
+                line("siminfo.rows", c.count)
+                val idCol = c.getColumnIndex("_id")
+                val numCol = c.getColumnIndex("number")
+                while (c.moveToNext()) {
+                    val id = if (idCol >= 0) c.getString(idCol) else "?"
+                    val num = if (numCol >= 0) c.getString(numCol) else "?"
+                    line("  siminfo", "id=$id number=$num")
+                }
+            }
+        }
 
         val tv = TextView(this).apply {
             text = sb.toString()

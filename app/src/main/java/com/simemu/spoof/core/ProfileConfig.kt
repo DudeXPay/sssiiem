@@ -47,6 +47,37 @@ data class ProfileConfig(
     /** Profile shown for single-SIM getters (first active profile). */
     fun primary(): SimProfile? = activeProfiles().firstOrNull()
 
+    /** True if [slot] is occupied by an added active profile. */
+    fun isActiveSlot(slot: Int): Boolean =
+        activeProfiles().any { it.slotIndex == slot }
+
+    /**
+     * The subscription id scoped apps should treat as both the login SIM and
+     * the mobile-data SIM. Falls back to the first active profile.
+     */
+    fun dataSubId(): Int =
+        profileForSub(defaultDataSubId)?.subscriptionId
+            ?: primary()?.subscriptionId
+            ?: defaultDataSubId
+
+    /** Profile that owns [dataSubId], i.e. the login + data SIM. */
+    fun dataProfile(): SimProfile? = profileForSub(dataSubId()) ?: primary()
+
+    /**
+     * Keep default data/voice/SMS pointing at an *added* active SIM. Login vs
+     * mobile-data checks in target apps fail if these still hold a real-card
+     * subId (or a stale id from a deleted profile).
+     */
+    fun syncDefaultsFromActive() {
+        val active = activeProfiles()
+        if (active.isEmpty()) return
+        val ids = active.map { it.subscriptionId }.toSet()
+        val fallback = active.first().subscriptionId
+        if (defaultDataSubId !in ids) defaultDataSubId = fallback
+        if (defaultVoiceSubId !in ids) defaultVoiceSubId = defaultDataSubId
+        if (defaultSmsSubId !in ids) defaultSmsSubId = defaultDataSubId
+    }
+
     fun toJson(): String = JSON.encodeToString(this)
 
     companion object {
@@ -60,7 +91,10 @@ data class ProfileConfig(
         }
 
         fun fromJson(raw: String?): ProfileConfig = try {
-            if (raw.isNullOrBlank()) ProfileConfig() else JSON.decodeFromString(raw)
+            val cfg = if (raw.isNullOrBlank()) ProfileConfig()
+                else JSON.decodeFromString<ProfileConfig>(raw)
+            cfg.syncDefaultsFromActive()
+            cfg
         } catch (t: Throwable) {
             ProfileConfig()
         }

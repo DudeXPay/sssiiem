@@ -34,6 +34,7 @@ class ConfigStore private constructor(
         ProfileConfig.fromJson(prefs.getString(Constants.KEY_CONFIG_JSON, null))
 
     fun save(config: ProfileConfig) {
+        config.syncDefaultsFromActive()
         val json = config.toJson()
         prefs.edit().putString(Constants.KEY_CONFIG_JSON, json).commit()
         // Mirror to Settings.Global so targetSdk 36+ hooks can read it.

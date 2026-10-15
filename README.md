@@ -35,7 +35,8 @@ SimEmulator/
         ├── res/…                                         # layouts, icon, strings
         └── java/com/simemu/spoof/
             ├── core/      # SimProfile, ProfileConfig, ConfigStore, ProfileGenerator, Constants
-            ├── hooks/     # HookEntry + TelephonyManagerHook + SubscriptionManagerHook + BinderHook + SubscriptionInfoFactory
+            ├── hooks/     # HookEntry + TelephonyManager / SubscriptionManager / Binder /
+            │              # Connectivity / TelephonyProvider + SubscriptionInfoFactory
             ├── settings/  # MainActivity, ProfileEditActivity, ScopeActivity + adapters (the UI)
             └── utils/     # Reflect (reflection helpers), XLog
 ```
@@ -100,8 +101,8 @@ important, because with no SIM the originals return `null` / `SIM_STATE_ABSENT` 
 
 | Method | Forced value | Why apps read it |
 |---|---|---|
-| `getSimState()` / `getSimState(slot)` | `SIM_STATE_READY` (5) | The master gate. Apps refuse all telephony behavior unless the SIM reports READY. |
-| `hasIccCard()` | `true` | Simplest "is a card present?" check. |
+| `getSimState()` / `getSimState(slot)` | READY for added slots; ABSENT otherwise | Master gate. Extra physical slots look empty so dual-SIM phones don't expose the real card. |
+| `hasIccCard()` / `(slot)` | `true` only for added slots | Simplest "is a card present?" check. |
 | `getSimCardState()` | `SIM_STATE_READY` | eUICC-level card-present check on newer APIs. |
 | `getSubscriberId()` | IMSI | Uniquely identifies the subscriber; used for provisioning / anti-fraud. |
 | `getSimSerialNumber()` | ICCID | The serial printed on the SIM; carrier apps key on it. |
@@ -116,6 +117,8 @@ important, because with no SIM the originals return `null` / `SIM_STATE_ABSENT` 
 | `getCarrierId()` / `getSimCarrierId()` | Carrier ID | Android's canonical carrier id; gates VoLTE/RCS/CarrierConfig. |
 | `getCarrierIdFromSimMccMnc()` | Carrier ID | Resolves a carrier id from MCC/MNC alone. |
 | `getSimCarrierIdName()` | Carrier name | Display name backing the carrier id. |
+| `getSubscriptionId()` | data SIM subId | Which sub this TelephonyManager is bound to. |
+| `isDataEnabled()` / `getDataState()` | `true` / `DATA_CONNECTED` | Login-vs-data checks require packet data "up" on that SIM. |
 
 For subscriber-scoped getters we inspect the `subId`/`slot` argument and return the
 matching profile, so **dual-SIM** apps read correct per-slot values.
@@ -135,10 +138,17 @@ synthesize **one subscription per profile** — which is exactly what yields
 | `getActiveSubscriptionInfoForSimSlotIndex(slot)` | matching `SubscriptionInfo` | Look up by physical slot. |
 | `getActiveSubscriptionIdList()` / `getSubscriptionIds()` | int[] of subIds | Raw id arrays. |
 | `getDefaultSubscriptionId()` | configured default | System default sub. |
-| `getDefaultDataSubscriptionId()` | configured default | Which sub carries data. |
+| `getDefaultDataSubscriptionId()` / `getActiveDataSubscriptionId()` | added data SIM | Which sub carries mobile data — **must match the login SIM** or apps show "use mobile data from the same SIM used for login". |
 | `getDefaultVoiceSubscriptionId()` | configured default | Which sub places calls. |
 | `getDefaultSmsSubscriptionId()` | configured default | Which sub sends SMS (SMS apps read this). |
+| `getPhoneNumber(subId)` | profile MSISDN | API 33+ number lookup at login. |
 | `isActiveSubscriptionId(subId)` | true for our ids | Validity check. |
+
+### 3.2b Connectivity + telephony DB
+Apps that still see the physical card as the data SIM usually bypass the managers:
+
+- **`ConnectivityHook`** — `NetworkCapabilities.getSubscriptionIds()`, `TelephonyNetworkSpecifier.getSubscriptionId()`, and Settings.Global `multi_sim_data_call` all report the added data SIM.
+- **`TelephonyProviderHook`** — `content://telephony/siminfo` (and similar) returns only added profiles, including the phone number. The real SIM rows are not listed.
 
 ### 3.3 `SubscriptionInfo` fabrication (`hooks/SubscriptionInfoFactory.kt`)
 `SubscriptionInfo` has **no public constructor**, and its private constructor changed
@@ -185,8 +195,11 @@ Android restricts non-SDK interface access on API 28+. `HookEntry` calls
 - **Random profile** — `core/ProfileGenerator` builds an internally-consistent SIM
   (IMSI begins with MCC+MNC, ICCID carries a valid Luhn check digit, real carrier
   MCC/MNC pairs) so validation apps accept it.
+- **Data + login SIM** — scoped apps treat this number as both the login identity
+  and the mobile-data subscription (fixes "use mobile data from the same SIM used
+  for login"). When two added SIMs are active, tap the card to pick which one.
 - **Per-app scope** (`ScopeActivity`) — the module's own allow-list; only apps toggled
-  on get spoofed.
+  on get spoofed. Those apps see only your added SIMs, not the physical card.
 - **Import / Export** — JSON via the Storage Access Framework.
 
 `settings/ProfileEditActivity.kt` edits every spoofable field: Carrier Name, Carrier
@@ -307,9 +320,12 @@ profile value by short-circuiting before the permission check.
 
 ## 7. Limitations & notes
 
-- Spoofs **Java-layer** getters only; it does not fabricate radio/RIL state, data
-  connectivity, or SMS delivery. Apps that verify connectivity by actually sending
-  traffic won't be fooled.
+- Spoofs **Java-layer** getters, connectivity subIds, and `telephony/siminfo`. It
+  does not fabricate radio/RIL state or carrier **header enrichment**. In-app
+  "same SIM for login and mobile data" checks are covered; a server that reads the
+  real MSISDN off the radio is not.
+- Scoped apps share the **active added SIMs** (option B). The physical card is
+  hidden from those processes. Force-stop the target after changing profiles.
 - `getLine1Number()` is increasingly restricted by the platform; some apps read the
   number via `SubscriptionInfo.number` instead — both are covered.
 - Hooks apply on **next process start**; always force-stop the target after changing

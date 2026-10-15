@@ -24,13 +24,26 @@ object TelephonyManagerHook {
     fun install(cls: Class<*>, config: ProfileConfig) {
         val primary = config.primary() ?: return
 
+        val dataSub = config.dataSubId()
+
         // ---- SIM presence & state ----
-        // getSimState()/getSimState(slot): apps gate ALL telephony behaviour on
-        // this. Must be SIM_STATE_READY (5) or the app treats the SIM as absent.
-        replace(cls, "getSimState") { TelephonyManager.SIM_STATE_READY }
-        // hasIccCard(): the simplest "is a SIM physically present?" check.
-        replace(cls, "hasIccCard") { true }
-        // getSimCardState()/getIccCardState (newer): card-present at the eUICC level.
+        // No-arg: READY. Slot overloads: READY only for added-profile slots so a
+        // dual-SIM phone does not look like the physical extra card is ours.
+        Reflect.hookAllByName(cls, "getSimState", object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val slot = param.args?.firstOrNull { it is Int } as? Int
+                param.result = if (slot == null || config.isActiveSlot(slot))
+                    TelephonyManager.SIM_STATE_READY
+                else
+                    TelephonyManager.SIM_STATE_ABSENT
+            }
+        })
+        Reflect.hookAllByName(cls, "hasIccCard", object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val slot = param.args?.firstOrNull { it is Int } as? Int
+                param.result = slot == null || config.isActiveSlot(slot)
+            }
+        })
         replace(cls, "getSimCardState") { TelephonyManager.SIM_STATE_READY }
 
         // ---- Subscriber identity ----
@@ -86,6 +99,19 @@ object TelephonyManagerHook {
         // isVoiceCapable()/isSmsCapable(): gate messaging/dialer features.
         replace(cls, "isVoiceCapable") { true }
         replace(cls, "isSmsCapable") { true }
+        replace(cls, "isDataCapable") { true }
+
+        // ---- Mobile data identity (login vs data-SIM checks) ----
+        // getSubscriptionId(): which sub this TelephonyManager is bound to.
+        replace(cls, "getSubscriptionId") { dataSub }
+        // isDataEnabled()/getDataEnabled()/isDataConnectionAllowed: data is on.
+        replace(cls, "isDataEnabled") { true }
+        replace(cls, "getDataEnabled") { true }
+        replace(cls, "isDataConnectionAllowed") { true }
+        replace(cls, "isUserDataEnabled") { true }
+        // getDataState(): DATA_CONNECTED so the app believes packet data is up.
+        replace(cls, "getDataState") { TelephonyManager.DATA_CONNECTED }
+        replace(cls, "getPreferredOpportunisticDataSubscription") { dataSub }
 
         // ---- Network registration / radio ----
         // Apps that check "is the SIM registered on a network" read these. With no

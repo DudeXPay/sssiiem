@@ -1,6 +1,5 @@
 package com.simemu.spoof.hooks
 
-import android.telephony.SubscriptionInfo
 import com.simemu.spoof.core.ProfileConfig
 import com.simemu.spoof.utils.Reflect
 import com.simemu.spoof.utils.XLog
@@ -17,22 +16,24 @@ object SubscriptionManagerHook {
 
     fun install(cls: Class<*>, config: ProfileConfig) {
         val active = config.activeProfiles()
-        val infos: List<SubscriptionInfo> =
-            active.mapNotNull { SubscriptionInfoFactory.build(it) }
+        val infos = ArrayList(active.mapNotNull { SubscriptionInfoFactory.build(it) })
         if (infos.isEmpty()) {
             XLog.e("SubscriptionManager: could not fabricate any SubscriptionInfo")
             return
         }
         val subIds: IntArray = active.map { it.subscriptionId }.toIntArray()
+        val dataSub = config.dataSubId()
 
         // getActiveSubscriptionInfoList(): the full list of active subs.
         replace(cls, "getActiveSubscriptionInfoList") { infos }
         // getActiveSubscriptionInfoCount(): apps use this before iterating.
         replace(cls, "getActiveSubscriptionInfoCount") { infos.size }
-        // getAllSubscriptionInfoList() / getAvailableSubscriptionInfoList(): broader
-        // enumerations some apps prefer; serve the same set.
+        // Broader enumerations some apps prefer; same added-SIM set so the
+        // physical card never appears.
         replace(cls, "getAllSubscriptionInfoList") { infos }
         replace(cls, "getAvailableSubscriptionInfoList") { infos }
+        replace(cls, "getCompleteActiveSubscriptionInfoList") { infos }
+        replace(cls, "getAccessibleSubscriptionInfoList") { infos }
 
         // getActiveSubscriptionInfo(subId): resolve by the requested subId.
         Reflect.hookAllByName(cls, "getActiveSubscriptionInfo", object : XC_MethodHook() {
@@ -53,23 +54,33 @@ object SubscriptionManagerHook {
         replace(cls, "getActiveSubscriptionIdList") { subIds }
         replace(cls, "getSubscriptionIds") { subIds }
 
-        // ---- default subscription selectors ----
-        // getDefaultSubscriptionId(): the system default sub.
+        // ---- default + active data selectors ----
+        // Login-vs-data checks compare these to the login MSISDN's subId. They
+        // must all be the added SIM, never the physical card's subId.
         replace(cls, "getDefaultSubscriptionId") { config.defaultVoiceSubId }
-        // getDefaultDataSubscriptionId(): which sub carries mobile data.
-        replace(cls, "getDefaultDataSubscriptionId") { config.defaultDataSubId }
-        // getDefaultVoiceSubscriptionId(): which sub places calls.
+        replace(cls, "getDefaultDataSubscriptionId") { dataSub }
+        replace(cls, "getActiveDataSubscriptionId") { dataSub }
         replace(cls, "getDefaultVoiceSubscriptionId") { config.defaultVoiceSubId }
-        // getDefaultSmsSubscriptionId(): which sub sends SMS (used by SMS apps).
         replace(cls, "getDefaultSmsSubscriptionId") { config.defaultSmsSubId }
 
+        // getPhoneNumber(subId): API 33+ MSISDN lookup used at login.
+        Reflect.hookAllByName(cls, "getPhoneNumber", object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val subId = param.args.firstOrNull { it is Int } as? Int
+                val profile = subId?.let { config.profileForSub(it) } ?: config.dataProfile()
+                param.result = profile?.phoneNumber.orEmpty()
+            }
+        })
+
         // isActiveSubscriptionId / isActiveSubId: true for ids we own.
-        Reflect.hookAllByName(cls, "isActiveSubscriptionId", object : XC_MethodHook() {
+        val isActive = object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
                 val subId = param.args.firstOrNull { it is Int } as? Int
                 param.result = subId != null && subId in subIds
             }
-        })
+        }
+        Reflect.hookAllByName(cls, "isActiveSubscriptionId", isActive)
+        Reflect.hookAllByName(cls, "isActiveSubId", isActive)
 
         XLog.d("SubscriptionManager hooks installed (${infos.size} sub(s))")
     }

@@ -16,7 +16,8 @@ import com.simemu.spoof.databinding.ItemProfileBinding
 class ProfileAdapter(
     private var items: List<SimProfile>,
     private val onClick: (SimProfile) -> Unit,
-    private val onToggleActive: (SimProfile, Boolean) -> Boolean
+    private val onToggleActive: (SimProfile, Boolean) -> Boolean,
+    private var dataSubId: Int = -1
 ) : RecyclerView.Adapter<ProfileAdapter.VH>() {
 
     inner class VH(val b: ItemProfileBinding) : RecyclerView.ViewHolder(b.root)
@@ -33,6 +34,8 @@ class ProfileAdapter(
         holder.b.pillSub.text = "sub ${p.subscriptionId}"
         holder.b.pillSlot.text = "slot ${p.slotIndex}"
         holder.b.pillEsim.visibility = if (p.isEmbedded) View.VISIBLE else View.GONE
+        holder.b.pillData.visibility =
+            if (p.active && p.subscriptionId == dataSubId) View.VISIBLE else View.GONE
 
         // Dim everything but the switch when the SIM is off.
         val dim = if (p.active) 1f else 0.4f
@@ -54,8 +57,9 @@ class ProfileAdapter(
 
     override fun getItemCount() = items.size
 
-    fun update(newItems: List<SimProfile>) {
+    fun update(newItems: List<SimProfile>, dataSubId: Int = this.dataSubId) {
         items = newItems
+        this.dataSubId = dataSubId
         notifyDataSetChanged()
     }
 }

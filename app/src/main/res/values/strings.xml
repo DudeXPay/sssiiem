@@ -15,6 +15,12 @@
     <string name="empty_title">No SIM profiles yet</string>
     <string name="empty_sub">Tap “Add profile” or generate a random one to get started.</string>
     <string name="esim_badge">eSIM</string>
+    <string name="data_badge">DATA</string>
+    <string name="data_login_sim_title">Data + login SIM</string>
+    <string name="data_login_sim">%1$s  ·  %2$s</string>
+    <string name="data_login_sim_hint">Scoped apps treat this number as both the login SIM and the mobile-data SIM — not the physical card. Force-stop the target app after changing it.</string>
+    <string name="data_login_sim_hint_pick">Tap to choose which added SIM is mobile data. Force-stop the target app after changing it.</string>
+    <string name="pick_data_sim">Default data SIM</string>
 
     <!-- Editor -->
     <string name="new_profile">New profile</string>
@@ -27,6 +33,6 @@
     <string name="operator_numeric_fmt">Operator numeric (MCC+MNC): %s</string>
 
     <!-- Scope -->
-    <string name="scope_hint">Only apps switched on here are spoofed. They must also be in this module’s LSPosed scope.</string>
+    <string name="scope_hint">Only apps switched on here are spoofed. They must also be in this module’s LSPosed scope. Enabled apps see only your added SIMs — login and mobile data both come from the Data SIM on the home screen, not the physical card.</string>
     <string name="scope_search">Search apps</string>
 </resources>

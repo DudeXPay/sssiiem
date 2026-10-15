@@ -8,6 +8,7 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.simemu.spoof.R
 import com.simemu.spoof.core.ConfigStore
@@ -45,17 +46,19 @@ class MainActivity : AppCompatActivity() {
             updateMasterStatus(checked)
         }
 
-        adapter = ProfileAdapter(config.profiles, { openEditor(it.id) }, ::onToggleActive)
+        adapter = ProfileAdapter(
+            config.profiles, { openEditor(it.id) }, ::onToggleActive, config.dataSubId())
         b.listProfiles.layoutManager = LinearLayoutManager(this)
         b.listProfiles.adapter = adapter
 
         b.fabAdd.setOnClickListener { openEditor(null) }
+        b.cardDataSim.setOnClickListener { pickDataSim() }
     }
 
     override fun onResume() {
         super.onResume()
         config = store.load()
-        adapter.update(config.profiles)
+        adapter.update(config.profiles, config.dataSubId())
         refreshList()
     }
 
@@ -100,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         target.active = checked
         store.save(cfg)
         config = cfg
-        adapter.update(config.profiles)
+        adapter.update(config.profiles, config.dataSubId())
         refreshList()
         return true
     }
@@ -112,7 +115,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun persist() {
         store.save(config)
-        adapter.update(config.profiles)
+        adapter.update(config.profiles, config.dataSubId())
         refreshList()
     }
 
@@ -123,6 +126,47 @@ class MainActivity : AppCompatActivity() {
         val total = resources.getQuantityString(
             R.plurals.profile_count, config.profiles.size, config.profiles.size)
         b.txtProfileCount.text = "$total · ${config.activeCount()}/${ProfileConfig.MAX_ACTIVE} active"
+        bindDataSimCard()
+    }
+
+    private fun bindDataSimCard() {
+        val data = config.dataProfile()
+        if (data == null) {
+            b.cardDataSim.visibility = android.view.View.GONE
+            return
+        }
+        b.cardDataSim.visibility = android.view.View.VISIBLE
+        b.txtDataSim.text = getString(R.string.data_login_sim, data.phoneNumber, data.label)
+        val twoActive = config.activeCount() > 1
+        b.txtDataSimHint.setText(
+            if (twoActive) R.string.data_login_sim_hint_pick else R.string.data_login_sim_hint)
+        b.cardDataSim.isClickable = twoActive
+        b.cardDataSim.isFocusable = twoActive
+    }
+
+    /** When two added SIMs are active, pick which one is mobile data + login. */
+    private fun pickDataSim() {
+        val active = config.activeProfiles()
+        if (active.size < 2) return
+        val labels = active.map { "${it.phoneNumber}  ·  ${it.label}" }.toTypedArray()
+        val checked = active.indexOfFirst { it.subscriptionId == config.dataSubId() }
+            .coerceAtLeast(0)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.pick_data_sim)
+            .setSingleChoiceItems(labels, checked) { dlg, which ->
+                val cfg = store.load()
+                val chosen = cfg.activeProfiles().getOrNull(which) ?: return@setSingleChoiceItems
+                cfg.defaultDataSubId = chosen.subscriptionId
+                cfg.defaultVoiceSubId = chosen.subscriptionId
+                cfg.defaultSmsSubId = chosen.subscriptionId
+                store.save(cfg)
+                config = cfg
+                adapter.update(config.profiles, config.dataSubId())
+                refreshList()
+                dlg.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     // ---- Import / Export via Storage Access Framework ----

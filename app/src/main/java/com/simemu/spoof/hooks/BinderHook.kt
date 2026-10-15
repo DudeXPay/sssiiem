@@ -35,20 +35,26 @@ object BinderHook {
                 XLog.d("Hooked IPhoneSubInfo proxy")
             }
 
-        // ---- ITelephony: SIM state & operator numeric ----
+        // ---- ITelephony: SIM state, data enabled ----
         Reflect.classOrNull("com.android.internal.telephony.ITelephony\$Stub\$Proxy", cl)
             ?.let { proxy ->
-                // SIM_STATE_READY == 5. Covers getSimState / getSimStateForSlotIndex.
-                bind(proxy, "getSimState") { 5 }
-                bind(proxy, "getSimStateForSlotIndex") { 5 }
+                bindSlotState(proxy, "getSimState", config)
+                bindSlotState(proxy, "getSimStateForSlotIndex", config)
+                bind(proxy, "isDataEnabled") { true }
+                bind(proxy, "getDataEnabled") { true }
+                bind(proxy, "isUserDataEnabled") { true }
+                bind(proxy, "getDataState") { 2 } // DATA_CONNECTED
                 XLog.d("Hooked ITelephony proxy")
             }
 
-        // ---- ISub: default subscription ids ----
+        // ---- ISub: default + active data subscription ids ----
+        val dataSub = config.dataSubId()
         Reflect.classOrNull("com.android.internal.telephony.ISub\$Stub\$Proxy", cl)
             ?.let { proxy ->
                 bind(proxy, "getDefaultSubId") { config.defaultVoiceSubId }
-                bind(proxy, "getDefaultDataSubId") { config.defaultDataSubId }
+                bind(proxy, "getDefaultDataSubId") { dataSub }
+                bind(proxy, "getActiveDataSubscriptionId") { dataSub }
+                bind(proxy, "getActiveDataSubId") { dataSub }
                 bind(proxy, "getDefaultVoiceSubId") { config.defaultVoiceSubId }
                 bind(proxy, "getDefaultSmsSubId") { config.defaultSmsSubId }
                 XLog.d("Hooked ISub proxy")
@@ -58,6 +64,16 @@ object BinderHook {
     private fun bind(cls: Class<*>, name: String, supplier: () -> Any?) {
         Reflect.hookAllByName(cls, name, object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) { param.result = supplier() }
+        })
+    }
+
+    /** SIM_STATE_READY (5) only for slots we occupy; others ABSENT (1). */
+    private fun bindSlotState(cls: Class<*>, name: String, config: ProfileConfig) {
+        Reflect.hookAllByName(cls, name, object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val slot = param.args?.firstOrNull { it is Int } as? Int
+                param.result = if (slot == null || config.isActiveSlot(slot)) 5 else 1
+            }
         })
     }
 

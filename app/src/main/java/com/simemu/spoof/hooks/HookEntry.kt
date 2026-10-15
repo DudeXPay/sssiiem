@@ -23,7 +23,8 @@ import org.lsposed.hiddenapibypass.HiddenApiBypass
  *      to query [ConfigProvider] over binder — the SELinux-safe way to read config
  *      (XSharedPreferences can't read our file cross-app on Android 10+).
  *   3. Read master switch + per-app scope from the provider; bail if off/out-of-scope.
- *   4. Install the TelephonyManager + SubscriptionManager (+ Binder) hooks.
+ *   4. Install TelephonyManager / SubscriptionManager / Binder / connectivity /
+ *      telephony-provider hooks so login identity and mobile data share one SIM.
  *
  * Application.attach runs before the app's own code and before any telephony call,
  * so installing hooks there is early enough.
@@ -54,11 +55,14 @@ class HookEntry : IXposedHookLoadPackage {
         if (!config.isAppEnabled(pkg)) return
         if (config.activeProfiles().isEmpty()) return
 
-        XLog.d("Activating SIM emulation for $pkg (${config.activeProfiles().size} active SIM(s))")
+        config.syncDefaultsFromActive()
+        XLog.d("Activating SIM emulation for $pkg (${config.activeProfiles().size} active SIM(s), dataSub=${config.dataSubId()})")
         try {
             TelephonyManagerHook.install(TelephonyManager::class.java, config)
             SubscriptionManagerHook.install(SubscriptionManager::class.java, config)
             BinderHook.install(cl, config)
+            ConnectivityHook.install(cl, config)
+            TelephonyProviderHook.install(config)
             if (config.diagnostics) {
                 DiagnosticHook.install(
                     TelephonyManager::class.java, SubscriptionManager::class.java, cl)

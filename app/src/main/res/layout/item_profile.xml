@@ -103,6 +103,19 @@
                     android:visibility="gone"
                     android:textAppearance="?attr/textAppearanceLabelSmall"
                     android:textColor="?attr/colorOnTertiaryContainer" />
+
+                <TextView
+                    android:id="@+id/pillData"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/pill_accent"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:text="@string/data_badge"
+                    android:visibility="gone"
+                    android:textAppearance="?attr/textAppearanceLabelSmall"
+                    android:textColor="?attr/colorOnTertiaryContainer" />
             </LinearLayout>
         </LinearLayout>
 
